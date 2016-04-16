@@ -19,7 +19,7 @@ executable publisher
   main-is:             Main.hs
   -- other-modules:       
   -- other-extensions:    
-  build-depends:       base >=4.8 && <4.9,
+  build-depends:       base >=4.7 && <4.9,
                        transformers,
                        monad-logger,
                        scotty,
