@@ -51,7 +51,7 @@ pandocToHtml = T.pack . writeHtmlString def
 
 readDbConfig :: IO B.ByteString
 readDbConfig = do
-  c <- readFile "db.conf"
+  c <- readFile "db/conn.conf"
   return $ B.pack $ T.unpack $ buildString $ T.lines $ T.pack c
 
 buildString :: [T.Text] -> T.Text
