@@ -34,8 +34,11 @@ import           System.IO
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Article
     json
+    reference String Eq
     title String
     content String
+    summary String
+    UniqueName reference
     deriving Show
     deriving Generic
 |]
@@ -51,7 +54,7 @@ pandocToHtml = T.pack . writeHtmlString def
 
 readDbConfig :: IO B.ByteString
 readDbConfig = do
-  c <- readFile "db/conn.conf"
+  c <- readFile "devel.cfg"
   return $ B.pack $ T.unpack $ buildString $ T.lines $ T.pack c
 
 buildString :: [T.Text] -> T.Text
@@ -67,15 +70,21 @@ main = do
     get "/" $ html "Hello World!"
     get "/articles" $ do
       articles <- inHandlerDb cs $ DB.selectList [] []
-      html ("Articles!" <> (T.pack $ show $ length (articles :: [DB.Entity Article])))
-    get "/articles/:id" $ do
-      articleId <- param "id"
-      findArticle <- inHandlerDb cs $ DB.get (DB.toSqlKey (read articleId))
-      html $ (markdownToHtml $ articleContent (fromMaybe (Article "Invalid Entry" "No such article exists.") (findArticle :: Maybe Article)))
-    get "/articles/:id/raw" $ do
-      articleId <- param "id"
-      findArticle <- inHandlerDb cs $ DB.get (DB.toSqlKey (read articleId))
-      html $ (T.pack $ articleContent (fromMaybe (Article "Invalid Entry" "No such article exists.") (findArticle :: Maybe Article)))
+      html ("Articles: " <> (T.pack $ show $ length (articles :: [DB.Entity Article])))
+    get "/articles/:ref" $ do
+      articleReference <- param "ref"
+      findArticle <- inHandlerDb cs $ DB.getBy $ UniqueName articleReference
+      case findArticle of
+        Nothing -> html $ (markdownToHtml $ articleContent (Article "Invalid Entry" "Invalid Entry" "No such article exists." "No summary."))
+        Just (DB.Entity _ a) ->
+          html $ (markdownToHtml $ articleContent a)
+    get "/articles/:ref/raw" $ do
+      articleReference <- param "ref"
+      findArticle <- inHandlerDb cs $ DB.getBy $ UniqueName articleReference
+      case findArticle of
+        Nothing -> html $ (markdownToHtml $ articleContent (Article "Invalid Entry" "Invalid Entry" "No such article exists." "No summary."))
+        Just (DB.Entity _ a) ->
+          html $ (T.pack $ articleContent a)
     put "/articles/:id" $ do
       article <- jsonData
       articleId <- param "id"
